@@ -131,3 +131,51 @@ Finally, let's see what happens when we try to book a time slot that is already 
 ---
 
 By following this workflow, you now have a complete picture of the API's behavior, its data structures, and its authentication requirements. Happy coding
+
+---
+
+## 5. Advanced Topic: Building a Resilient Frontend
+
+A key quality of our backend is **Availability**, which includes the ability for services to automatically restart if they crash. As a frontend developer, it's critical to understand how this affects the user experience and how to build a resilient UI.
+
+### The Scenario: A Temporary Service Outage
+
+In a microservice architecture, a service like the `authentication-service` might restart. This can be due to a deployment, scaling, or automatic recovery from a crash. When this happens, there is a small window of **5-10 seconds** where that specific service is unavailable.
+
+During this window, the API Gateway (Kong) is still running, but it cannot reach the restarting service. It will respond with a `502 Bad Gateway` or `503 Service Unavailable` error.
+
+### How to Test This Scenario
+
+We have built a special debug endpoint so you can safely simulate this exact scenario.
+
+1.  **Login Normally:** Use the console client to log in and get a valid token.
+2.  **Simulate a Crash:** In a separate terminal (not the client), use `curl` to send a command that forces the `authentication-service` to crash and restart.
+    ```bash
+    # Get your token from the console client's successful login
+    TOKEN="<paste-your-token-here>"
+
+    # Send the crash command
+    curl --location --request POST 'http://localhost:8000/auth/debug/crash' \
+    --header "Authorization: Bearer $TOKEN"
+    ```
+3.  **Immediately Try Another Action:** Quickly switch back to the console client and try to perform an action that requires authentication, like **View Room Schedule**.
+
+### Expected Result & Frontend Best Practices
+
+Your API call will likely fail. You will see an error in the console like `Failed to get schedule: An invalid response was received from the upstream server`. This is the `503` error from Kong.
+
+**This is NOT an authentication error (like a 401).**
+
+A naive frontend might see this network error and assume the user's session is invalid, logging them out. This creates a terrible user experience.
+
+**A resilient frontend should:**
+
+*   **Differentiate Error Codes:** Your API client logic (e.g., using Axios interceptors) should check the status code. A `401 Unauthorized` means the token is bad, and the user should be logged out. A `502` or `503` means the server is temporarily unhealthy.
+*   **Implement a Retry Mechanism:** On a `502` or `503` error, do not fail immediately. Instead:
+    1.  Wait for 1-2 seconds.
+    2.  Silently retry the original request.
+    3.  If it fails again, perhaps wait a bit longer (3-4 seconds) and retry one last time.
+*   **Provide Graceful User Feedback:** While the retry mechanism is active, you can show a subtle, non-intrusive notification to the user, like a toast message saying "Connection is unstable, retrying..." instead of a full-page error.
+
+By implementing this retry logic, your frontend application will seamlessly survive a backend service restart, providing a smooth and professional user experience.
+
