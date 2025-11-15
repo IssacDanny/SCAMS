@@ -1,0 +1,24 @@
+_format_version: "3.0"
+
+services:
+  - name: authentication-service
+    url: http://authentication-service:3002
+    routes:
+      - name: auth-login-route
+        paths:
+          - /auth/login
+        strip_path: false  # CHANGED: Pass the full path to the service
+      - name: auth-protected-route
+        paths:
+          - /auth/me
+        strip_path: false  # CHANGED: Pass the full path to the service
+    plugins:
+      - name: jwt
+        config:
+          key_claim_name: iss
+
+# Explicitly disable JWT for the login route
+plugins:
+  - name: jwt
+    route: auth-login-route
+    enabled: false

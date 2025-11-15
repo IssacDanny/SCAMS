@@ -1,0 +1,13 @@
+# Start from the official, Debian-based Kong image. This is the correct base.
+FROM kong:3.4
+
+# Switch to the root user to have permissions to install software.
+USER root
+
+# Use the 'apt-get' package manager, which is correct for this Debian-based image.
+# 1. 'apt-get update': Refreshes the list of available packages.
+# 2. 'apt-get install -y curl bash': Installs curl and bash without asking for confirmation.
+RUN apt-get update && apt-get install -y curl bash
+
+# Switch back to the non-privileged 'kong' user for security.
+USER kong

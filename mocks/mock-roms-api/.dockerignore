@@ -1,0 +1,7 @@
+# Exclude node_modules as they will be installed inside the container.
+# This prevents our local dependencies from being copied into the image,
+# which is crucial for creating a clean and portable build.
+node_modules
+
+# Exclude local environment files. These should never be in a container image.
+.env
